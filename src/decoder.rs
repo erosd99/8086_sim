@@ -94,7 +94,7 @@ fn decode_flags<'a>(
     offset: &'a usize,
     flags: &'a [Flag],
 ) -> HashMap<&'a Flag, usize> {
-    // Due to ISA limitations, we can assume that all flags lie on the first bit
+    // Due to the ISA specification, we can assume that all flags lie on the first bit
     let mut output = HashMap::new();
     for idx in 0..flags.len() {
         let offset_byte = byte >> (8 - (offset + idx + 1));
@@ -104,11 +104,41 @@ fn decode_flags<'a>(
 
     return output;
 }
+#[derive(Debug)]
 pub struct DecodedArgument {
     pub operand: String,
     pub source: String,
     pub destination: String,
     byte_count: usize,
+}
+impl DecodedArgument {
+    pub fn parse(val: &str) -> Option<DecodedArgument> {
+        // We assume that instructions are made up of 2 or 3 words. 
+        // If they're made up of 3 words, then there is a ',' character between the destination and source.
+        let mut split: Vec<String> = val.split(" ").map(|s| s.to_string()).collect();
+        match split.len() {
+            3 => {
+                return Some(DecodedArgument {
+                    operand: split[0].to_string(),
+                    source: split[2].to_string(),
+                    destination: {
+                        split[1].pop();
+                        split[1].to_string()
+                    },
+                    byte_count: 0,
+                })
+            }
+            2 =>  {
+                return Some(DecodedArgument {
+                    operand: split[0].to_string(),
+                    source: split[1].to_string(),
+                    destination: String::from(""),
+                    byte_count: 0,
+                })
+            }
+            _ => None
+        }
+    }
 }
 
 fn decode_arguments<'a>(
